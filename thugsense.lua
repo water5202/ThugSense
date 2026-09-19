@@ -396,7 +396,7 @@ end
                 local NewX = StartPosition.X.Offset + DragDelta.X
                 local NewY = StartPosition.Y.Offset + DragDelta.Y
                 -- No clamping – window can go anywhere
-                self:Tween(TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2New(0, NewX, 0, NewY)})
+                self:Tween(TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2New(0, NewX, 0, NewY)})
             end
         
             local InputChanged
