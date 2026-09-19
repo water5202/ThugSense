@@ -918,14 +918,17 @@ end
         Library:Notification("Saved config " .. tostring(Config), 5, Color3.fromRGB(0, 255, 0))
         return true
     end
+
     Library.RefreshConfigsList = function(self, Element)
-        local List = {}
-        for _, Value in listfiles(Library.Folders.Configs) do
-            local FileName = tostring(Value):match("([^\\/]+)$")
-            if FileName and FileName:sub(-5) == ".json" then
-                table.insert(List, FileName)
+        pcall(function()
+            local List = {}
+            for _, Value in listfiles(Library.Folders.Configs) do
+                local FileName = tostring(Value):match("([^\\/]+)$")
+                if FileName and FileName:sub(-5) == ".json" then
+                    table.insert(List, FileName)
+                end
             end
-        end
+        end) 
         table.sort(List)
         Element:Refresh(List)
         return List
