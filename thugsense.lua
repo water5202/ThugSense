@@ -9,18 +9,23 @@ if getgenv().Library then
 end
 
 local Library do
+
+    gethui = gethui or function()
+        return CoreGui
+    end
+
+    cloneref = cloneref or function(obj)
+        return obj -- executor support duh thx xylex for letting me learn this from your code
+    end
+    
     local UserInputService = game:GetService("UserInputService")
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
     local HttpService = game:GetService("HttpService")
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
-    local CoreGui = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-
-    gethui = gethui or function()
-        return CoreGui
-    end
-
+    local CoreGui = cloneref(game:GetService("CoreGui"))
+    
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
     local Mouse = LocalPlayer:GetMouse()
