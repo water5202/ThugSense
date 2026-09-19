@@ -730,21 +730,18 @@ end
 
         return NewThread
     end
-    
-Library.SafeCall = function(self, Function, ...)
-    if not self._alive then return false end
-    
-    local Arguements = { ... }
-    local Success, Result = pcall(Function, TableUnpack(Arguements))
 
-    if not Success then
-        Library:Notification("Error caught in function, report this to the devs:\n"..Result, 5, FromRGB(255, 0, 0))
-        warn(Result)
-        return false
+    Library.SafeCall = function(self, Function, ...)
+        if not self._alive then return false end
+        local Arguments = { ... }
+        local Success, Result = pcall(Function, TableUnpack(Arguments))
+        if not Success then
+            Library:Notification("Error caught in function, report this to the devs:\n"..Result, 5, FromRGB(255, 0, 0))
+            --warn(Result)
+            return false
+        end
+        return Success
     end
-
-    return Success
-end
 
     Library.Connect = function(self, Event, Callback, Name)
         Name = Name or StringFormat("Connection_%s_%s", self.UnnamedConnections + 1, HttpService:GenerateGUID(false))
@@ -795,103 +792,138 @@ end
         TableInsert(self.ThemeItems, ThemeData)
         self.ThemeMap[Item] = ThemeData
     end
+        local function GetConfigPath(Config)
+            if not Config or Config == "" then
+                return nil
+            end
+        Config = tostring(Config):match("([^\\/]+)$") or tostring(Config)
+        return Library.Folders.Configs .. "/" .. Config
+    end
 
     Library.GetConfig = function(self)
-        local Config = { } 
+        local Config = {}
+        --local Success, Result = Library:SafeCall(function()
+        for Index, Value in Library.Flags do
+            if type(Value) == "table" and Value.Key then
+                Config[Index] = {
+                    Key = tostring(Value.Key),
+                    Mode = Value.Mode
+                }
 
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Library.Flags do
-                print(Index,Value)
-                if type(Value) == "table" and Value.Key then
-                    Config[Index] = {Key = tostring(Value.Key), Mode = Value.Mode}
-                elseif type(Value) == "table" and Value.Color then
-                    Config[Index] = {Color = "#" .. Value.HexValue, Alpha = Value.Alpha}
-                else
-                    Config[Index] = Value
-                end
+            elseif type(Value) == "table" and Value.Color then
+                Config[Index] = {
+                    Color = "#" .. Value.HexValue,
+                    Alpha = Value.Alpha
+                }
+
+            else
+                Config[Index] = Value
             end
-            
-        end)
-
+        end
+    --end)
+        if not Success then
+            return "{}"
+        end
         return HttpService:JSONEncode(Config)
     end
-
     Library.LoadConfig = function(self, Config)
-        if not Config then return end
-        local Decoded = HttpService:JSONDecode(Config)
+        if not Config then
+            return false
+        end
 
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Decoded do 
-                local SetFunction = Library.SetFlags[Index]
-
-                if not SetFunction then
-                    continue
-                end
-
-                if type(Value) == "table" and Value.Key then 
-                    SetFunction(Value)
-                elseif type(Value) == "table" and Value.Color then
-                    SetFunction(Value.Color, Value.Alpha)
-                else
-                    SetFunction(Value)
-                end
-            end
+        local Decoded
+        local Success, Error = pcall(function()
+            Decoded = HttpService:JSONDecode(Config)
         end)
 
-        if Success then 
-            Library:Notification("Successfully loaded config", 5, Color3.fromRGB(0, 255, 0))
+        if not Success then
+            Library:Notification("Json decode error " .. tostring(Error), 5, FromRGB(255, 0, 0))
+            return false
         end
-    end
+        for Index, Value in Decoded do
+            local SetFunction = Library.SetFlags[Index]
+            
+            if type(SetFunction) ~= "function" then
+                warn("NO SET FUNCTION:", Index)
+                continue
+            end
+            local FlagSuccess, FlagError = xpcall(function()
 
-    Library.DeleteConfig = function(self, Config)
-        if Config and isfile(Library.Folders.Configs .. "/" .. Config) then 
-            delfile(Library.Folders.Configs .. "/" .. Config)
-            Library:Notification("Deleted config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
+            if type(Value) == "table" and Value.Key ~= nil then
+                SetFunction({
+                    Key = Value.Key,
+                    Mode = Value.Mode
+                })
+
+            elseif type(Value) == "table" and Value.Color ~= nil then
+                SetFunction(Value.Color, Value.Alpha)
+
+            else
+                SetFunction(Value)
+            end
+        end, function(Error)
+            return debug.traceback(
+                Library:Notification("Traceback error " .. tostring(Error), 5, FromRGB(255, 0, 0))
+            )
+        end)
+            if not FlagSuccess then
+                warn(FlagError)
+                Library:Notification("Config error " .. tostring(Index), 5, FromRGB(255, 0, 0))
+                return false
+            end
         end
+        Library:Notification("Successfully loaded config.",5, FromRGB(0, 255, 0))
+        return true
+    end
+    
+    Library.DeleteConfig = function(self, Config)
+        local Path = GetConfigPath(Config)
+        if Path and isfile(Path) then
+            delfile(Path)
+            Library:Notification("Deleted config " .. tostring(Config), 5, Color3.fromRGB(0, 255, 0))
+            return true
+        end
+        return false
     end
 
     Library.SaveConfig = function(self, Config)
-        if Config and isfile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json") then
-            writefile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json", Library:GetConfig())
-            Library:Notification("Saved config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
-        end
-    end
+        local Path = GetConfigPath(Config)
 
+        if not Path then
+            return false
+        end
+        
+        if not isfile(Path) then
+            return false
+        end
+        
+        writefile(Path, Library:GetConfig())
+        
+        Library:Notification("Saved config " .. tostring(Config), 5, Color3.fromRGB(0, 255, 0))
+        return true
+    end
     Library.RefreshConfigsList = function(self, Element)
-        local CurrentList = { }
-        local List = { }
-
-        local ConfigFolderName = StringGSub(Library.Folders.Configs, Library.Folders.Directory .. "/", "")
-
-        for Index, Value in listfiles(Library.Folders.Configs) do
-            local FileName = StringGSub(Value, Library.Folders.Directory .. "\\" .. ConfigFolderName .. "\\", "")
-            List[Index] = FileName
-        end
-
-        local IsNew = #List ~= CurrentList
-
-        if not IsNew then
-            for Index = 1, #List do
-                if List[Index] ~= CurrentList[Index] then
-                    IsNew = true
-                    break
-                end
+        local List = {}
+        for _, Value in listfiles(Library.Folders.Configs) do
+            local FileName = tostring(Value):match("([^\\/]+)$")
+            if FileName and FileName:sub(-5) == ".json" then
+                table.insert(List, FileName)
             end
-        else
-            CurrentList = List
-            Element:Refresh(CurrentList)
         end
+        table.sort(List)
+        Element:Refresh(List)
+        return List
     end
-
-Library.ChangeItemTheme = function(self, Item, Properties)
-    if not self._alive then return end
-    Item = Item.Instance or Item
-    if not Item or not self.ThemeMap[Item] then
-        return
+    
+    Library.ChangeItemTheme = function(self, Item, Properties)
+        if not self._alive then return end
+        Item = Item.Instance or Item
+        if not Item or not self.ThemeMap[Item] then
+            return
+        end
+        self.ThemeMap[Item].Properties = Properties
+        self.ThemeMap[Item] = self.ThemeMap[Item]
     end
-    self.ThemeMap[Item].Properties = Properties
-    self.ThemeMap[Item] = self.ThemeMap[Item]
-end
 
     Library.ChangeTheme = function(self, Theme, Color)
         self.Theme[Theme] = Color
@@ -2127,7 +2159,7 @@ end
                 Keybind.Value = TextToDisplay
                 Items["Text"].Instance.Text = TextToDisplay
 
-                if Keybind.Callback then 
+                if Data.Callback then 
                     Library:SafeCall(Keybind.Callback, Keybind.Toggled)
                 end
             end
@@ -5037,7 +5069,6 @@ end
 
     Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
         local SettingsTab = Window:Page({Name = "Settings", Columns = 2, Subtabs = false})
-
         do
             local SettingsSection = SettingsTab:Section({Name = "Settings", Side = 2})
             local ConfigsSection = SettingsTab:Section({Name = "Profiles", Side = 1})
@@ -5098,7 +5129,7 @@ end
         
                     Library:RefreshConfigsList(ConfigsListbox)
                 else
-                    Library:Notification("A Config with the same name already exists.", 3, Color3.FromR(255, 0, 0))
+                    Library:Notification("Config '" .. ConfigName .. ".json' already exists", 3, Color3.fromRGB(255, 0, 0))
                     return
                 end
             end})
@@ -5108,12 +5139,12 @@ end
                     Library:LoadConfig(readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
         
-                task.wait(0.1)
+                    task.wait(0.1)
         
-                for Index, Value in Library.Theme do 
-                    Library.Theme[Index] = Library.Flags["Theme"..Index].Color
-                    Library:ChangeTheme(Index, Library.Flags["Theme"..Index].Color)
-                end    
+                    for Index, Value in Library.Theme do 
+                        Library.Theme[Index] = Library.Flags["Theme"..Index].Color
+                        Library:ChangeTheme(Index, Library.Flags["Theme"..Index].Color)
+                    end    
             end})
         
             ConfigsSection:Button({Name = "Delete Config", Callback = function()
@@ -5127,7 +5158,6 @@ end
             ConfigsSection:Button({Name = "Save Config", Callback = function()
                 if ConfigSelected then
                     Library:SaveConfig(ConfigSelected)
-                    Library:Notification("Saved Config.", 3, Color3.FromR(255, 0, 0))
                 end
             end})
         
@@ -5144,7 +5174,9 @@ end
             end})
 
             ConfigsSection:Button({Name = "Remove Autoload", Callback = function()
-                writefile(Library.Folders.Directory .. "/autoload.json", "")
+                if isfile(Library.Folders.Directory .. "/autoload.json") then
+                    writefile(Library.Folders.Directory .. "/autoload.json", "")
+                end
             end})
         
             Library:RefreshConfigsList(ConfigsListbox)
@@ -5158,6 +5190,22 @@ end
             end
         end
     end
+
+    Library.Demo = function()
+        local win = Library.Window({
+            Name = "water.wtf",
+            Size = UDim2.new(0, 500, 0, 400),
+            FadeSpeed = 0.25
+        })
+
+        local tabAiming = win:Page({Name = "Aiming",   Columns = 2})
+        local tabSelf = win:Page({Name = "Self",      Columns = 2})
+        local tabVisuals = win:Page({Name = "Visuals",   Columns = 2})
+        
+        Library:CreateSettingsPage(win)
+        Library:Init()
+    end
 end
 
 getgenv().Library = Library
+return Library
