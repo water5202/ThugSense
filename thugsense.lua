@@ -5208,10 +5208,11 @@ end
         end
 
         Library.Init = function(self)
-            local IsAutoload = readfile(Library.Folders.Directory .. "/autoload.json")
-
-            if IsAutoload ~= "" then
-                Library:LoadConfig(IsAutoload)
+            if isfile(Library.Folders.Directory .. "/autoload.json") then
+                local IsAutoload = readfile(Library.Folders.Directory .. "/autoload.json")
+                if IsAutoload ~= "" then
+                    Library:LoadConfig(IsAutoload)
+                end 
             end
         end
     end
