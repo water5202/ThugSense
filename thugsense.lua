@@ -792,7 +792,8 @@ end
         TableInsert(self.ThemeItems, ThemeData)
         self.ThemeMap[Item] = ThemeData
     end
-        local function GetConfigPath(Config)
+    
+    local function GetConfigPath(Config)
             if not Config or Config == "" then
                 return nil
             end
@@ -802,7 +803,7 @@ end
 
     Library.GetConfig = function(self)
         local Config = {}
-        --local Success, Result = Library:SafeCall(function()
+        local succ, err = pcall(function()
         for Index, Value in Library.Flags do
             if type(Value) == "table" and Value.Key then
                 Config[Index] = {
@@ -820,8 +821,8 @@ end
                 Config[Index] = Value
             end
         end
-    --end)
-        if not Success then
+    end)
+        if not succ then
             return "{}"
         end
         return HttpService:JSONEncode(Config)
@@ -842,9 +843,7 @@ end
         end
         for Index, Value in Decoded do
             local SetFunction = Library.SetFlags[Index]
-            
             if type(SetFunction) ~= "function" then
-                warn("NO SET FUNCTION:", Index)
                 continue
             end
             local FlagSuccess, FlagError = xpcall(function()
@@ -5135,7 +5134,7 @@ end
             end})
         
             ConfigsSection:Button({Name = "Load Config", Callback = function()
-                if ConfigSelected then
+                if ConfigSelected and isfile(Library.Folders.Configs .. "/" .. ConfigSelected) then
                     Library:LoadConfig(readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
         
@@ -5168,7 +5167,7 @@ end
             ConfigsSection:Divider()
 
             ConfigsSection:Button({Name = "Set As Autoload", Callback = function()
-                if ConfigSelected then 
+                if ConfigSelected and isfile(Library.Folders.Configs .. "/" .. ConfigSelected) then 
                     writefile(Library.Folders.Directory .. "/autoload.json", readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
             end})
@@ -5201,7 +5200,6 @@ end
         local tabAiming = win:Page({Name = "Aiming",   Columns = 2})
         local tabSelf = win:Page({Name = "Self",      Columns = 2})
         local tabVisuals = win:Page({Name = "Visuals",   Columns = 2})
-        
         Library:CreateSettingsPage(win)
         Library:Init()
     end
