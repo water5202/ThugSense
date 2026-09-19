@@ -920,8 +920,8 @@ end
     end
 
     Library.RefreshConfigsList = function(self, Element)
+        local List = {}
         pcall(function()
-            local List = {}
             for _, Value in listfiles(Library.Folders.Configs) do
                 local FileName = tostring(Value):match("([^\\/]+)$")
                 if FileName and FileName:sub(-5) == ".json" then
