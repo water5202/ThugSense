@@ -800,7 +800,8 @@ end
         local Config = { } 
 
         local Success, Result = Library:SafeCall(function()
-            for Index, Value in Library.Flags do 
+            for Index, Value in Library.Flags do
+                print(Index,Value)
                 if type(Value) == "table" and Value.Key then
                     Config[Index] = {Key = tostring(Value.Key), Mode = Value.Mode}
                 elseif type(Value) == "table" and Value.Color then
@@ -809,12 +810,14 @@ end
                     Config[Index] = Value
                 end
             end
+            
         end)
 
         return HttpService:JSONEncode(Config)
     end
 
     Library.LoadConfig = function(self, Config)
+        if not Config then return end
         local Decoded = HttpService:JSONDecode(Config)
 
         local Success, Result = Library:SafeCall(function()
@@ -841,14 +844,14 @@ end
     end
 
     Library.DeleteConfig = function(self, Config)
-        if isfile(Library.Folders.Configs .. "/" .. Config) then 
+        if Config and isfile(Library.Folders.Configs .. "/" .. Config) then 
             delfile(Library.Folders.Configs .. "/" .. Config)
             Library:Notification("Deleted config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
         end
     end
 
     Library.SaveConfig = function(self, Config)
-        if isfile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json") then
+        if Config and isfile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json") then
             writefile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json", Library:GetConfig())
             Library:Notification("Saved config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
         end
@@ -5095,7 +5098,7 @@ end
         
                     Library:RefreshConfigsList(ConfigsListbox)
                 else
-                    Library:Notification("Config '" .. ConfigName .. ".json' already exists", 3, Color3.FromR(255, 0, 0))
+                    Library:Notification("A Config with the same name already exists.", 3, Color3.FromR(255, 0, 0))
                     return
                 end
             end})
@@ -5105,12 +5108,12 @@ end
                     Library:LoadConfig(readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
         
-                    task.wait(0.1)
+                task.wait(0.1)
         
-                    for Index, Value in Library.Theme do 
-                        Library.Theme[Index] = Library.Flags["Theme"..Index].Color
-                        Library:ChangeTheme(Index, Library.Flags["Theme"..Index].Color)
-                    end    
+                for Index, Value in Library.Theme do 
+                    Library.Theme[Index] = Library.Flags["Theme"..Index].Color
+                    Library:ChangeTheme(Index, Library.Flags["Theme"..Index].Color)
+                end    
             end})
         
             ConfigsSection:Button({Name = "Delete Config", Callback = function()
@@ -5124,6 +5127,7 @@ end
             ConfigsSection:Button({Name = "Save Config", Callback = function()
                 if ConfigSelected then
                     Library:SaveConfig(ConfigSelected)
+                    Library:Notification("Saved Config.", 3, Color3.FromR(255, 0, 0))
                 end
             end})
         
@@ -5157,4 +5161,3 @@ end
 end
 
 getgenv().Library = Library
-return Library
