@@ -1,5 +1,6 @@
 --[[
-    Ui Library made by samet | Errors fixed by phemonaz but all credits to samet
+    Ui Library made by samet | Errors fixed by phemonaz but all credits to samet,
+    fixed by water technically <----
 ]]
 
 local LoadingTick = os.clock()
@@ -732,16 +733,35 @@ end
     end
 
     Library.SafeCall = function(self, Function, ...)
-        if not self._alive then return false end
-        local Arguments = { ... }
-        local Success, Result = pcall(Function, TableUnpack(Arguments))
-        if not Success then
-            Library:Notification("Error caught in function, report this to the devs:\n"..Result, 5, FromRGB(255, 0, 0))
-            --warn(Result)
-            return false
-        end
-        return Success
+    if not self._alive then
+        return false
     end
+
+    if type(Function) ~= "function" then
+        return false
+    end
+
+    local Arguments = { ... }
+
+    local Success, Error = xpcall(function()
+        Function(TableUnpack(Arguments))
+    end, function(ErrorMessage)
+        return debug.traceback(tostring(ErrorMessage), 2)
+    end)
+
+    if not Success then
+        Library:Notification(
+            "Error caught in function, report this to the devs:\n" .. tostring(Error),
+            5,
+            FromRGB(255, 0, 0)
+        )
+
+        warn(Error)
+        return false
+    end
+
+    return true
+end
 
     Library.Connect = function(self, Event, Callback, Name)
         Name = Name or StringFormat("Connection_%s_%s", self.UnnamedConnections + 1, HttpService:GenerateGUID(false))
@@ -792,8 +812,7 @@ end
         TableInsert(self.ThemeItems, ThemeData)
         self.ThemeMap[Item] = ThemeData
     end
-    
-    local function GetConfigPath(Config)
+        local function GetConfigPath(Config)
             if not Config or Config == "" then
                 return nil
             end
@@ -802,31 +821,27 @@ end
     end
 
     Library.GetConfig = function(self)
-        local Config = {}
-        local succ, err = pcall(function()
-        for Index, Value in Library.Flags do
-            if type(Value) == "table" and Value.Key then
-                Config[Index] = {
-                    Key = tostring(Value.Key),
-                    Mode = Value.Mode
-                }
+    local Config = {}
 
-            elseif type(Value) == "table" and Value.Color then
-                Config[Index] = {
-                    Color = "#" .. Value.HexValue,
-                    Alpha = Value.Alpha
-                }
-
-            else
-                Config[Index] = Value
-            end
+    for Index, Value in Library.Flags do
+        if type(Value) == "table" and Value.Key then
+            Config[Index] = {
+                Key = tostring(Value.Key),
+                Mode = Value.Mode
+            }
+        elseif type(Value) == "table" and Value.Color then
+            Config[Index] = {
+                Color = "#" .. Value.HexValue,
+                Alpha = Value.Alpha
+            }
+        else
+            Config[Index] = Value
         end
-    end)
-        if not succ then
-            return "{}"
-        end
-        return HttpService:JSONEncode(Config)
     end
+
+    return HttpService:JSONEncode(Config)
+    end
+
     Library.LoadConfig = function(self, Config)
         if not Config then
             return false
@@ -843,7 +858,9 @@ end
         end
         for Index, Value in Decoded do
             local SetFunction = Library.SetFlags[Index]
+            
             if type(SetFunction) ~= "function" then
+                warn("NO SET FUNCTION:", Index)
                 continue
             end
             local FlagSuccess, FlagError = xpcall(function()
@@ -5066,7 +5083,7 @@ end
         return Listbox
     end
 
-    Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
+    Library.CreateSettingsPage = function(self, Window, Watermark: WatermarkType?, KeybindList: KeybindListType?)
         local SettingsTab = Window:Page({Name = "Settings", Columns = 2, Subtabs = false})
         do
             local SettingsSection = SettingsTab:Section({Name = "Settings", Side = 2})
@@ -5084,11 +5101,15 @@ end
             end})
         
             SettingsSection:Toggle({Name = "Watermark", Flag = "Watermark", Default = false, Callback = function(Value)
-                Watermark:SetVisibility(Value)
+                if Watermark then
+                    Watermark:SetVisibility(Value)
+                end
             end})
         
             SettingsSection:Toggle({Name = "Keybind List", Flag = "Keybind List", Default = false, Callback = function(Value)
-                KeybindList:SetVisibility(Value)
+                if KeybindList then
+                    KeybindList:SetVisibility(Value)
+                end
             end})
         
             SettingsSection:Dropdown({Name = "Tweening Style", Flag = "Tweening Style", Default = "Exponential", Items = {"Linear", "Sine", "Quad", "Cubic", "Quart", "Quint", "Exponential", "Circular", "Back", "Elastic", "Bounce"}, Callback = function(Value)
@@ -5137,13 +5158,15 @@ end
                 if ConfigSelected and isfile(Library.Folders.Configs .. "/" .. ConfigSelected) then
                     Library:LoadConfig(readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
-        
-                    task.wait(0.1)
-        
-                    for Index, Value in Library.Theme do 
-                        Library.Theme[Index] = Library.Flags["Theme"..Index].Color
-                        Library:ChangeTheme(Index, Library.Flags["Theme"..Index].Color)
-                    end    
+                task.wait(0.1)
+    
+                for Index in Library.Theme do
+                    local Flag = Library.Flags["Theme" .. Index]
+                    if Flag and Flag.Color ~= nil then
+                        Library.Theme[Index] = Flag.Color
+                        Library:ChangeTheme(Index, Flag.Color)
+                    end
+                end
             end})
         
             ConfigsSection:Button({Name = "Delete Config", Callback = function()
@@ -5167,7 +5190,7 @@ end
             ConfigsSection:Divider()
 
             ConfigsSection:Button({Name = "Set As Autoload", Callback = function()
-                if ConfigSelected and isfile(Library.Folders.Configs .. "/" .. ConfigSelected) then 
+                if ConfigSelected then 
                     writefile(Library.Folders.Directory .. "/autoload.json", readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
             end})
@@ -5188,20 +5211,6 @@ end
                 Library:LoadConfig(IsAutoload)
             end
         end
-    end
-
-    Library.Demo = function()
-        local win = Library.Window({
-            Name = "water.wtf",
-            Size = UDim2.new(0, 500, 0, 400),
-            FadeSpeed = 0.25
-        })
-
-        local tabAiming = win:Page({Name = "Aiming",   Columns = 2})
-        local tabSelf = win:Page({Name = "Self",      Columns = 2})
-        local tabVisuals = win:Page({Name = "Visuals",   Columns = 2})
-        Library:CreateSettingsPage(win)
-        Library:Init()
     end
 end
 
