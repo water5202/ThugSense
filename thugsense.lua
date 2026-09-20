@@ -895,7 +895,6 @@ end
                 return false
             end
         end
-        Library:Notification("Successfully loaded config.",5, FromRGB(0, 255, 0))
         return true
     end
     
