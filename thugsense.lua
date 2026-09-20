@@ -3726,8 +3726,8 @@ end
             Library.Flags[Toggle.Flag] = Toggle.Value
 
             if Toggle.Value then 
+                print(Library.Theme.Accent)
                 Items["Indicator"]:ChangeItemTheme({BackgroundColor3 = "Accent"})
-
                 Items["Indicator"]:Tween(nil, {BackgroundColor3 = Library.Theme.Accent})
                 Items["Text"]:Tween(nil, {TextTransparency = 0})
             else
