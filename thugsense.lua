@@ -5161,7 +5161,6 @@ end
                 if ConfigSelected and isfile(Library.Folders.Configs .. "/" .. ConfigSelected) then
                     Library:LoadConfig(readfile(Library.Folders.Configs .. "/" .. ConfigSelected))
                 end
-                task.wait(0.1)
     
                 for Index in Library.Theme do
                     local Flag = Library.Flags["Theme" .. Index]
