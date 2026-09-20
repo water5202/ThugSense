@@ -702,12 +702,11 @@ Library:Connect(NewTween.Tween.Completed, function()
             Item[Property] = OldTransparency
         end
     end
-end)
+    end)
 
         return NewTween
     end
-
-Library.Unload = function(self)
+    Library.Unload = function(self)
     self._alive = false
     for Index, Value in self.Connections do 
         Value.Connection:Disconnect()
@@ -718,7 +717,7 @@ Library.Unload = function(self)
     if self.Holder then 
         self.Holder:Clean()
     end
-end
+    end
 
     Library.Thread = function(self, Function)
         local NewThread = coroutine.create(Function)
@@ -761,7 +760,7 @@ end
     end
 
     return true
-end
+    end
 
     Library.Connect = function(self, Event, Callback, Name)
         Name = Name or StringFormat("Connection_%s_%s", self.UnnamedConnections + 1, HttpService:GenerateGUID(false))
@@ -910,17 +909,9 @@ end
 
     Library.SaveConfig = function(self, Config)
         local Path = GetConfigPath(Config)
-
-        if not Path then
-            return false
-        end
-        
-        if not isfile(Path) then
-            return false
-        end
+        if not Path then return false end
         
         writefile(Path, Library:GetConfig())
-        
         Library:Notification("Saved config " .. tostring(Config), 5, Color3.fromRGB(0, 255, 0))
         return true
     end
