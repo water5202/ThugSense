@@ -851,11 +851,19 @@ end
         local Success, Error = pcall(function()
             Decoded = HttpService:JSONDecode(Config)
         end)
-
+                                            
         if not Success then
             Library:Notification("Json decode error " .. tostring(Error), 5, FromRGB(255, 0, 0))
             return false
         end
+
+    for Index in self.Theme do
+        local Flag = Decoded["Theme" .. Index]
+
+        if type(Flag) == "table" and Flag.Color then
+            self.SetFlags["Theme" .. Index](Flag.Color, Flag.Alpha)
+        end
+    end
         for Index, Value in Decoded do
             local SetFunction = Library.SetFlags[Index]
             
